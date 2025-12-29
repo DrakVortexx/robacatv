@@ -8,6 +8,10 @@ const ctx = canvas.getContext('2d');
 const statusEl = document.getElementById('status');
 const nameInput = document.getElementById('name');
 const setNameBtn = document.getElementById('setName');
+const moneyEl = document.getElementById('money');
+const carryingEl = document.getElementById('carrying');
+const shieldBtn = document.getElementById('shieldBtn');
+const interactBtn = document.getElementById('interactBtn');
 
 function resize() {
   canvas.width = Math.min(window.innerWidth, arena.width);
@@ -21,18 +25,25 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 's' || e.key === 'ArrowDown') input.down = true;
   if (e.key === 'a' || e.key === 'ArrowLeft') input.left = true;
   if (e.key === 'd' || e.key === 'ArrowRight') input.right = true;
+  if (e.key === 'e' || e.key === 'E') { input.interact = true; }
+  if (e.key === 'q' || e.key === 'Q') { input.shield = true; }
 });
 window.addEventListener('keyup', (e) => {
   if (e.key === 'w' || e.key === 'ArrowUp') input.up = false;
   if (e.key === 's' || e.key === 'ArrowDown') input.down = false;
   if (e.key === 'a' || e.key === 'ArrowLeft') input.left = false;
   if (e.key === 'd' || e.key === 'ArrowRight') input.right = false;
+  if (e.key === 'e' || e.key === 'E') { input.interact = false; }
+  if (e.key === 'q' || e.key === 'Q') { input.shield = false; }
 });
 
 setNameBtn.addEventListener('click', () => {
   const n = nameInput.value.trim();
   if (n) socket.emit('setName', n);
 });
+
+shieldBtn.addEventListener('click', () => { input.shield = true; setTimeout(()=>input.shield=false, 200); });
+interactBtn.addEventListener('click', () => { input.interact = true; setTimeout(()=>input.interact=false, 200); });
 
 socket.on('connect', () => { statusEl.textContent = 'Connected'; });
 socket.on('disconnect', () => { statusEl.textContent = 'Disconnected'; });
@@ -83,14 +94,18 @@ function draw() {
 
   ctx.restore();
 
-  // scoreboard
+  // scoreboard + HUD
   ctx.fillStyle = '#000'; ctx.font = '14px sans-serif';
-  const sorted = lastState.players.slice().sort((a,b)=>b.score-a.score);
+  const sorted = lastState.players.slice().sort((a,b)=>b.money-b.money);
   let y = 18;
   for (let i=0;i<Math.min(6, sorted.length); i++){
     const p = sorted[i];
-    ctx.fillText(`${p.name}: ${p.score}`, 10, y); y += 18;
+    ctx.fillText(`${p.name}: ${p.money}`, 10, y); y += 18;
   }
+
+  // update DOM HUD
+  const me = lastState.players.find(p=>p.id===clientId);
+  if (me){ moneyEl.textContent = me.money; carryingEl.textContent = me.carrying ? ('#'+me.carrying) : 'None'; }
 
   requestAnimationFrame(draw);
 }
