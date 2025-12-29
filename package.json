@@ -1,0 +1,18 @@
+{
+  "name": "robacat",
+  "version": "0.1.0",
+  "description": "Multiplayer Robacat - steal-a-brainrot with cats",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": "18.x"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2"
+  }
+}

@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Robacat - steal-a-brainrot with cats</title>
+    <link rel="stylesheet" href="/style.css">
+  </head>
+  <body>
+    <div id="hud">
+      <label> Name: <input id="name" placeholder="Your cat name" maxlength="20"> </label>
+      <button id="setName">Set</button>
+      <span id="status">Connecting...</span>
+    </div>
+    <canvas id="game"></canvas>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/client.js"></script>
+  </body>
+</html>
