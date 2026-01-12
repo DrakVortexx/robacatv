@@ -19,10 +19,13 @@ const CAT_TYPES = [
 ];
 
 // Socket.io
-if (typeof io === 'undefined') {
-    alert("Error: Game Server not connected! \n\nIf you are running this locally, make sure to run 'node server.js' and visit http://localhost:3000.\n\nIf you just opened the index.html file directly, Multiplayer features won't work.");
+let socket;
+if (typeof io !== 'undefined') {
+    socket = io();
+} else {
+    console.error("Socket.io is not loaded. Multiplayer features will be disabled.");
+    alert("Warning: Multiplayer server not found. You can play offline, but other players won't be visible.");
 }
-const socket = io();
 
 // Game State
 let gameState = {
@@ -150,7 +153,9 @@ function loadGame(username, userData) {
     userDisplay.textContent = username;
     
     // Connect to Multiplayer
-    socket.emit('join', { username: username });
+    if (socket) {
+        socket.emit('join', { username: username });
+    }
     
     updateUI();
     renderBase();
@@ -172,7 +177,9 @@ function saveGame() {
         setTimeout(() => saveBtn.textContent = originalText, 1000);
         
         // Sync with server
-        socket.emit('syncBase', gameState.cats);
+        if (socket) {
+            socket.emit('syncBase', gameState.cats);
+        }
     }
 }
 
@@ -306,7 +313,7 @@ function updateWorld(deltaTime) {
         if (keys.a) { self.x -= speed; moved = true; }
         if (keys.d) { self.x += speed; moved = true; }
         
-        if (moved) {
+        if (moved && socket) {
             socket.emit('move', { x: self.x, y: self.y });
         }
         
@@ -327,7 +334,7 @@ function updateWorld(deltaTime) {
             interactionMsg.textContent = `Press 'E' to steal from ${nearbyBase.username}`;
             interactionMsg.classList.remove('hidden');
             
-            if (keys.e) {
+            if (keys.e && socket) {
                 keys.e = false; // debounce
                 socket.emit('trySteal', nearbyBase.username);
             }
@@ -484,6 +491,7 @@ function renderBase() {
 // --- Event Listeners ---
 
 loginBtn.addEventListener('click', () => {
+    console.log("Login button clicked"); // Debug
     login(usernameInput.value, passwordInput.value);
 });
 
