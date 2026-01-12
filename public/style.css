@@ -1,7 +1,0 @@
-html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial}
-body{display:flex;flex-direction:column;align-items:stretch;background:#f3f6fb}
-#hud{padding:8px;background:#fff;border-bottom:1px solid #ddd;display:flex;gap:8px;align-items:center}
-#game{width:100%;height:calc(100vh - 48px);display:block;background:#cfe}
-
-input{padding:4px 8px}
-button{padding:6px 10px}
