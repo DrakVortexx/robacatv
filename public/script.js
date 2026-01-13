@@ -1,6 +1,6 @@
-// ================================
+// =====================================================
 // CONFIG
-// ================================
+// =====================================================
 const GAME_CONFIG = {
     beltSpeed: 2,
     spawnRate: 60,
@@ -8,16 +8,16 @@ const GAME_CONFIG = {
     saveInterval: 10000
 };
 
-// ================================
+// =====================================================
 // HELPERS
-// ================================
+// =====================================================
 function randBetween(min, max) {
     return Math.random() * (max - min) + min;
 }
 
-// ================================
+// =====================================================
 // CAT GENERATION (100, ALL GENERATED)
-// ================================
+// =====================================================
 function generateCatTypes(targetCount = 100) {
 
     const adjectives = [
@@ -59,7 +59,6 @@ function generateCatTypes(targetCount = 100) {
 
     for (let i = 0; i < targetCount; i++) {
         const r = pickRarity();
-
         const adj = adjectives[i % adjectives.length];
         const noun = nouns[Math.floor(i / adjectives.length) % nouns.length];
 
@@ -84,14 +83,9 @@ function generateCatTypes(targetCount = 100) {
 
 const CAT_TYPES = generateCatTypes(100);
 
-// ================================
-// SOCKET
-// ================================
-let socket = typeof io !== 'undefined' ? io() : null;
-
-// ================================
+// =====================================================
 // GAME STATE
-// ================================
+// =====================================================
 let gameState = {
     username: null,
     money: 100,
@@ -105,17 +99,64 @@ let gameLoopId = null;
 let saveIntervalId = null;
 let incomeIntervalId = null;
 
-// ================================
+// =====================================================
 // DOM
-// ================================
+// =====================================================
+const loginScreen = document.getElementById('login-screen');
+const gameContainer = document.getElementById('game-container');
+const loginBtn = document.getElementById('login-btn');
+const usernameInput = document.getElementById('username');
+const passwordInput = document.getElementById('password');
+const loginMessage = document.getElementById('login-message');
+
 const conveyorBelt = document.getElementById('conveyor-belt');
 const baseCatsContainer = document.getElementById('base-cats');
 const moneyDisplay = document.getElementById('money-display');
 const incomeDisplay = document.getElementById('income-display');
 
-// ================================
+// =====================================================
+// AUTH
+// =====================================================
+async function login(username, password) {
+    if (!username || !password) {
+        loginMessage.textContent = 'Enter username and password';
+        return;
+    }
+
+    const resp = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ username, password })
+    });
+
+    const data = await resp.json();
+    if (data.error) {
+        loginMessage.textContent = data.error;
+        return;
+    }
+
+    loadGame(username, data.gameState);
+}
+
+function loadGame(username, savedState) {
+    gameState = savedState || gameState;
+    gameState.username = username;
+
+    loginScreen.classList.add('hidden');
+    gameContainer.classList.remove('hidden');
+
+    updateUI();
+    renderBase();
+    startGame();
+}
+
+loginBtn.addEventListener('click', () => {
+    login(usernameInput.value.trim(), passwordInput.value.trim());
+});
+
+// =====================================================
 // GAME LOOP
-// ================================
+// =====================================================
 function startGame() {
     if (gameLoopId) return;
 
@@ -128,22 +169,15 @@ function startGame() {
     gameLoopId = requestAnimationFrame(gameLoop);
 }
 
-function stopGame() {
-    cancelAnimationFrame(gameLoopId);
-    clearInterval(saveIntervalId);
-    clearInterval(incomeIntervalId);
-    gameLoopId = saveIntervalId = incomeIntervalId = null;
-}
-
 function gameLoop() {
     frameCount = (frameCount + 1) % 1_000_000;
     updateBase();
     gameLoopId = requestAnimationFrame(gameLoop);
 }
 
-// ================================
+// =====================================================
 // BASE LOGIC
-// ================================
+// =====================================================
 function updateBase() {
     if (frameCount % GAME_CONFIG.spawnRate === 0) spawnCat();
 
@@ -161,13 +195,11 @@ function updateBase() {
 
 function pickRandomCatType() {
     const luckMult = 1 + gameState.upgrades.luck * 0.1;
-
     const weights = CAT_TYPES.map(c =>
         c.rarity === 'common' ? c.chance : c.chance * luckMult
     );
 
     let roll = Math.random() * weights.reduce((a,b)=>a+b,0);
-
     for (let i = 0; i < CAT_TYPES.length; i++) {
         if ((roll -= weights[i]) <= 0) return CAT_TYPES[i];
     }
@@ -176,19 +208,14 @@ function pickRandomCatType() {
 
 function spawnCat() {
     const type = pickRandomCatType();
-
     const el = document.createElement('div');
-    el.className = `cat ${type.rarity}`;
-    el.innerHTML = `
-        <span class="cat-emoji">${type.emoji}</span>
-        <div class="cat-cost">$${type.cost}</div>
-    `;
 
+    el.className = `cat ${type.rarity}`;
+    el.innerHTML = `<span>${type.emoji}</span><div>$${type.cost}</div>`;
     el.style.left = '-60px';
     el.style.top = `${Math.random() * 80 + 10}px`;
 
     const obj = { id: Date.now() + Math.random(), type, x: -60, el };
-
     el.onclick = () => buyCat(obj);
 
     conveyorBelt.appendChild(el);
@@ -197,16 +224,11 @@ function spawnCat() {
 
 function buyCat(cat) {
     const cap = GAME_CONFIG.maxBaseCapacity + gameState.upgrades.capacity * 2;
-
-    if (gameState.cats.length >= cap) {
-        alert('Base full!');
-        return;
-    }
+    if (gameState.cats.length >= cap) return alert('Base full!');
     if (gameState.money < cat.type.cost) return;
 
     gameState.money -= cat.type.cost;
     gameState.cats.push(cat.type);
-
     cat.el.remove();
     activeCats = activeCats.filter(c => c.id !== cat.id);
 
@@ -218,22 +240,20 @@ function buyCat(cat) {
 function sellCat(index) {
     const cat = gameState.cats[index];
     if (!cat) return;
-
     gameState.money += cat.value;
     gameState.cats.splice(index, 1);
-
     renderBase();
     updateUI();
     saveGame();
 }
 
 function calculateIncome() {
-    return gameState.cats.reduce((s, c) => s + c.income, 0);
+    return gameState.cats.reduce((s,c)=>s+c.income,0);
 }
 
-// ================================
+// =====================================================
 // UI
-// ================================
+// =====================================================
 function updateUI() {
     moneyDisplay.textContent = `$${Math.floor(gameState.money)}`;
     incomeDisplay.textContent = `$${calculateIncome()}/s`;
@@ -241,35 +261,32 @@ function updateUI() {
 
 function renderBase() {
     baseCatsContainer.innerHTML = '';
-
-    gameState.cats.forEach((cat, idx) => {
+    gameState.cats.forEach((cat, i) => {
         const d = document.createElement('div');
-        d.className = `base-cat ${cat.rarity}`;
         d.innerHTML = `
-            <div class="cat-emoji">${cat.emoji}</div>
-            <div class="cat-name">${cat.name}</div>
-            <div class="cat-income">+$${cat.income}/s</div>
-            <div class="cat-value">Sell $${cat.value}</div>
+            <div>${cat.emoji}</div>
+            <div>${cat.name}</div>
+            <div>+$${cat.income}/s</div>
+            <div>Sell $${cat.value}</div>
         `;
-        d.onclick = () => sellCat(idx);
+        d.onclick = () => sellCat(i);
         baseCatsContainer.appendChild(d);
     });
 }
 
-// ================================
+// =====================================================
 // SAVE
-// ================================
+// =====================================================
 async function saveGame() {
     if (!gameState.username) return;
     fetch('/api/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: gameState.username, gameState })
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ username: gameState.username, gameState })
     });
 }
 
-// ================================
-// INIT
-// ================================
+// =====================================================
+// INIT (DO NOT AUTO-START GAME)
+// =====================================================
 updateUI();
-startGame();
