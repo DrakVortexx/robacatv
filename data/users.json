@@ -1,0 +1,19 @@
+{
+  "users": {
+    "DrakVortexx": {
+      "username": "DrakVortexx",
+      "passwordHash": "",
+      "gameState": {
+        "username": "DrakVortexx",
+        "money": 0,
+        "cats": [],
+        "upgrades": {
+          "speed": 1,
+          "luck": 1,
+          "capacity": 1
+        },
+        "startTime": 1700000000000
+      }
+    }
+  }
+}
